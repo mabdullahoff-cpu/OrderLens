@@ -198,7 +198,93 @@ function CVDChart({ candles }: { candles: FootprintCandle[] }) {
     </div>
   )
 }
+function VolumeProfile({ candles }: { candles: FootprintCandle[] }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
 
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas || candles.length === 0) return
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    const W = canvas.width
+    const H = canvas.height
+    ctx.clearRect(0, 0, W, H)
+    ctx.fillStyle = '#0f0f0f'
+    ctx.fillRect(0, 0, W, H)
+
+    // Aggregate volume per price level across all candles
+    const volMap = new Map<number, number>()
+    candles.forEach(candle => {
+      candle.levels.forEach(level => {
+        const p = Math.round(level.price * 4) / 4
+        volMap.set(p, (volMap.get(p) || 0) + level.bidVol + level.askVol)
+      })
+    })
+
+    const entries = Array.from(volMap.entries()).sort((a, b) => a[0] - b[0])
+    if (entries.length === 0) return
+
+    const maxVol = Math.max(...entries.map(e => e[1]))
+    const minPrice = entries[0][0]
+    const maxPrice = entries[entries.length - 1][0]
+    const priceRange = maxPrice - minPrice || 1
+
+    const padding = { top: 10, bottom: 30, left: 55, right: 10 }
+    const chartH = H - padding.top - padding.bottom
+    const chartW = W - padding.left - padding.right
+
+    const pocPrice = entries.reduce((a, b) => b[1] > a[1] ? b : a)[0]
+
+    entries.forEach(([price, vol]) => {
+      const y = padding.top + chartH - ((price - minPrice) / priceRange) * chartH
+      const barW = (vol / maxVol) * chartW
+      const isPOC = price === pocPrice
+
+      ctx.fillStyle = isPOC ? 'rgba(250,199,117,0.8)' : 'rgba(99,153,220,0.5)'
+      ctx.fillRect(padding.left, y - 3, barW, 5)
+
+      if (isPOC) {
+        ctx.strokeStyle = 'rgba(250,199,117,0.4)'
+        ctx.lineWidth = 0.5
+        ctx.setLineDash([4, 4])
+        ctx.beginPath()
+        ctx.moveTo(padding.left, y)
+        ctx.lineTo(W - padding.right, y)
+        ctx.stroke()
+        ctx.setLineDash([])
+      }
+    })
+
+    // Price axis
+    for (let i = 0; i <= 5; i++) {
+      const price = minPrice + (priceRange / 5) * i
+      const y = padding.top + chartH - (i / 5) * chartH
+      ctx.fillStyle = '#555'
+      ctx.font = '9px monospace'
+      ctx.textAlign = 'right'
+      ctx.fillText(price.toFixed(2), padding.left - 4, y + 3)
+    }
+
+    // POC label
+    const pocY = padding.top + chartH - ((pocPrice - minPrice) / priceRange) * chartH
+    ctx.fillStyle = '#f59e0b'
+    ctx.font = '9px monospace'
+    ctx.textAlign = 'left'
+    ctx.fillText(`POC ${pocPrice.toFixed(2)}`, padding.left + 4, pocY - 5)
+
+  }, [candles])
+
+  return (
+    <div style={{ borderTop: '1px solid #222' }}>
+      <div style={{ padding: '4px 12px', fontSize: '10px', color: '#555', letterSpacing: '0.08em' }}>
+        VOLUME PROFILE — POC highlighted in yellow
+      </div>
+      <canvas ref={canvasRef} width={900} height={160}
+        style={{ width: '100%', height: '160px', display: 'block' }} />
+    </div>
+  )
+}
 export default function FootprintChart() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [candles, setCandles] = useState<FootprintCandle[]>([])
@@ -286,7 +372,8 @@ export default function FootprintChart() {
         <canvas ref={canvasRef} width={900} height={500}
           style={{ width: '100%', height: '100%', display: 'block' }} />
       </div>
-      <CVDChart candles={candles} />
+       <CVDChart candles={candles} />
+<VolumeProfile candles={candles} />
     </div>
   )
 }
