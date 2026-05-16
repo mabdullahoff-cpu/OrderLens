@@ -67,6 +67,20 @@ function drawChart(canvas: HTMLCanvasElement, candles: FootprintCandle[]) {
   const candleWidth = chartW / candles.length
   const priceToY = (price: number) =>
     paddingTop + chartH - ((price - minPrice) / priceRange) * chartH
+  // Calculate VWAP
+  let totalVolPrice = 0
+  let totalVol = 0
+  const vwapPoints: { x: number; y: number }[] = []
+  candles.forEach((candle, i) => {
+    const vol = candle.levels.reduce((s, l) => s + l.bidVol + l.askVol, 0)
+    const typicalPrice = (candle.high + candle.low + candle.close) / 3
+    totalVolPrice += typicalPrice * vol
+    totalVol += vol
+    const vwap = totalVol > 0 ? totalVolPrice / totalVol : typicalPrice
+    const x = paddingLeft + i * candleWidth + (candleWidth - 4) / 2
+    const y = priceToY(vwap)
+    vwapPoints.push({ x, y })
+  })
   ctx.strokeStyle = '#1a1a1a'
   ctx.lineWidth = 0.5
   for (let i = 0; i <= 5; i++) {
@@ -150,6 +164,25 @@ function drawChart(canvas: HTMLCanvasElement, candles: FootprintCandle[]) {
     ctx.font = '10px monospace'
     ctx.textAlign = 'right'
     ctx.fillText(price.toFixed(2), paddingLeft - 4, y + 3)
+  }
+  // Draw VWAP line
+  if (vwapPoints.length > 0) {
+    ctx.strokeStyle = '#a78bfa'
+    ctx.lineWidth = 1.5
+    ctx.setLineDash([4, 3])
+    ctx.beginPath()
+    vwapPoints.forEach((p, i) => {
+      i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)
+    })
+    ctx.stroke()
+    ctx.setLineDash([])
+
+    // VWAP label
+    const last = vwapPoints[vwapPoints.length - 1]
+    ctx.fillStyle = '#a78bfa'
+    ctx.font = '9px monospace'
+    ctx.textAlign = 'left'
+    ctx.fillText('VWAP', last.x + 4, last.y - 4)
   }
 }
 
