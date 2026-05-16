@@ -290,23 +290,28 @@ export default function FootprintChart() {
   const [candles, setCandles] = useState<FootprintCandle[]>([])
   const [symbol, setSymbol] = useState('AAPL')
   const [status, setStatus] = useState('Loading...')
+  const [isCrypto, setIsCrypto] = useState(false)
 
   const fetchBars = async (sym: string) => {
     setStatus('Loading...')
     try {
       const end = new Date()
-      const start = new Date(end.getTime() - 60 * 60 * 1000)
-      const url = `https://data.alpaca.markets/v2/stocks/${sym}/bars?timeframe=5Min&start=${start.toISOString()}&end=${end.toISOString()}&limit=12`
+      const start = new Date(end.getTime() - 35 * 60 * 1000)
+      const url = isCrypto
+  ? `https://data.alpaca.markets/v1beta3/crypto/us/bars?symbols=${sym}&timeframe=1Min&start=${start.toISOString()}&end=${end.toISOString()}&limit=30`
+  : `https://data.alpaca.markets/v2/stocks/${sym}/bars?timeframe=1Min&start=${start.toISOString()}&end=${end.toISOString()}&limit=30`
       const res = await fetch(url, {
         headers: {
           'APCA-API-KEY-ID': import.meta.env.VITE_ALPACA_KEY,
           'APCA-API-SECRET-KEY': import.meta.env.VITE_ALPACA_SECRET,
         }
       })
+       
       const data = await res.json()
-      if (data.bars && data.bars.length > 0) {
-        setCandles(data.bars.map(barToCandle))
-        setStatus(`${sym} — ${data.bars.length} candles loaded`)
+      const bars = isCrypto ? data.bars?.[sym] : data.bars
+      if (bars && bars.length > 0) {
+        setCandles(bars.map(barToCandle))
+        setStatus(`${sym} — ${bars.length} candles loaded`)
       } else {
         setStatus('No data — market may be closed, showing mock data')
         loadMock()
@@ -343,7 +348,7 @@ export default function FootprintChart() {
     fetchBars(symbol)
     const interval = setInterval(() => fetchBars(symbol), 30000)
     return () => clearInterval(interval)
-  }, [symbol])
+  }, [symbol, isCrypto])
 
   useEffect(() => {
     if (canvasRef.current && candles.length > 0) {
@@ -353,20 +358,32 @@ export default function FootprintChart() {
 
   return (
     <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: '12px',
-        padding: '8px 12px', borderBottom: '1px solid #222'
-      }}>
-        {['AAPL', 'TSLA', 'SPY', 'QQQ', 'NVDA'].map(s => (
-          <button key={s} onClick={() => setSymbol(s)} style={{
-            padding: '4px 12px', borderRadius: '6px', border: '1px solid',
-            borderColor: symbol === s ? '#2563eb' : '#333',
-            background: symbol === s ? '#2563eb22' : 'transparent',
-            color: symbol === s ? '#60a5fa' : '#666',
-            fontSize: '12px', cursor: 'pointer'
-          }}>{s}</button>
-        ))}
-        <span style={{ fontSize: '11px', color: '#444', marginLeft: 'auto' }}>{status}</span>
+     <div style={{ borderBottom: '1px solid #222', padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: '10px', color: '#555' }}>STOCKS</span>
+          {['AAPL', 'TSLA', 'SPY', 'QQQ', 'NVDA'].map(s => (
+            <button key={s} onClick={() => { setSymbol(s); setIsCrypto(false) }} style={{
+              padding: '3px 10px', borderRadius: '6px', border: '1px solid',
+              borderColor: symbol === s && !isCrypto ? '#2563eb' : '#333',
+              background: symbol === s && !isCrypto ? '#2563eb22' : 'transparent',
+              color: symbol === s && !isCrypto ? '#60a5fa' : '#666',
+              fontSize: '12px', cursor: 'pointer'
+            }}>{s}</button>
+          ))}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: '10px', color: '#555' }}>CRYPTO</span>
+          {['BTC/USD', 'ETH/USD', 'SOL/USD'].map(s => (
+            <button key={s} onClick={() => { setSymbol(s); setIsCrypto(true) }} style={{
+              padding: '3px 10px', borderRadius: '6px', border: '1px solid',
+              borderColor: symbol === s && isCrypto ? '#f59e0b' : '#333',
+              background: symbol === s && isCrypto ? '#f59e0b22' : 'transparent',
+              color: symbol === s && isCrypto ? '#fbbf24' : '#666',
+              fontSize: '12px', cursor: 'pointer'
+            }}>{s}</button>
+          ))}
+          <span style={{ fontSize: '11px', color: '#444', marginLeft: 'auto' }}>{status}</span>
+        </div>
       </div>
       <div style={{ flex: 1 }}>
         <canvas ref={canvasRef} width={900} height={500}
