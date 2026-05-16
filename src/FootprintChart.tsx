@@ -342,6 +342,7 @@ export default function FootprintChart() {
   const [symbol, setSymbol] = useState('AAPL')
   const [status, setStatus] = useState('Loading...')
   const [alerts, setAlerts] = useState<string[]>([])
+  const wsRef = useRef<WebSocket | null>(null)
   const [isCrypto, setIsCrypto] = useState(false)
   const [timeframe, setTimeframe] = useState('1Min')
 
@@ -397,10 +398,44 @@ export default function FootprintChart() {
     setCandles(mock)
   }
 
-  useEffect(() => {
+ useEffect(() => {
     fetchBars(symbol)
     const interval = setInterval(() => fetchBars(symbol), 30000)
-    return () => clearInterval(interval)
+
+    // WebSocket real-time stream
+    if (wsRef.current) wsRef.current.close()
+
+    const wsUrl = isCrypto
+      ? 'wss://stream.data.alpaca.markets/v1beta3/crypto/us'
+      : 'wss://stream.data.alpaca.markets/v2/iex'
+
+    const ws = new WebSocket(wsUrl)
+    wsRef.current = ws
+
+    ws.onopen = () => {
+      ws.send(JSON.stringify({ action: 'auth', key: import.meta.env.VITE_ALPACA_KEY, secret: import.meta.env.VITE_ALPACA_SECRET }))
+    }
+
+    ws.onmessage = (event) => {
+      const msgs = JSON.parse(event.data)
+      msgs.forEach((msg: any) => {
+        if (msg.T === 'authenticated') {
+          const subSymbol = isCrypto ? symbol : symbol
+          ws.send(JSON.stringify({ action: 'subscribe', trades: [subSymbol] }))
+        }
+        if (msg.T === 't') {
+          // New trade — refresh bars to get latest candle
+          fetchBars(symbol)
+        }
+      })
+    }
+
+    ws.onerror = () => console.log('WS error — falling back to polling')
+
+    return () => {
+      clearInterval(interval)
+      ws.close()
+    }
   }, [symbol, isCrypto, timeframe])
 useEffect(() => {
     if (canvasRef.current && candles.length > 0) {
