@@ -342,6 +342,7 @@ export default function FootprintChart() {
   const [symbol, setSymbol] = useState('AAPL')
   const [status, setStatus] = useState('Loading...')
   const [isCrypto, setIsCrypto] = useState(false)
+  const [timeframe, setTimeframe] = useState('1Min')
 
   const fetchBars = async (sym: string) => {
     setStatus('Loading...')
@@ -349,8 +350,8 @@ export default function FootprintChart() {
       const end = new Date()
       const start = new Date(end.getTime() - 35 * 60 * 1000)
       const url = isCrypto
-  ? `https://data.alpaca.markets/v1beta3/crypto/us/bars?symbols=${sym}&timeframe=1Min&start=${start.toISOString()}&end=${end.toISOString()}&limit=30`
-  : `https://data.alpaca.markets/v2/stocks/${sym}/bars?timeframe=1Min&start=${start.toISOString()}&end=${end.toISOString()}&limit=30`
+  ? `https://data.alpaca.markets/v1beta3/crypto/us/bars?symbols=${sym}&timeframe=${timeframe}&start=${start.toISOString()}&end=${end.toISOString()}&limit=30`
+  : `https://data.alpaca.markets/v2/stocks/${sym}/bars?timeframe=${timeframe}&start=${start.toISOString()}&end=${end.toISOString()}&limit=30`
       const res = await fetch(url, {
         headers: {
           'APCA-API-KEY-ID': import.meta.env.VITE_ALPACA_KEY,
@@ -399,7 +400,7 @@ export default function FootprintChart() {
     fetchBars(symbol)
     const interval = setInterval(() => fetchBars(symbol), 30000)
     return () => clearInterval(interval)
-  }, [symbol, isCrypto])
+  }, [symbol, isCrypto, timeframe])
 
   useEffect(() => {
     if (canvasRef.current && candles.length > 0) {
@@ -410,6 +411,23 @@ export default function FootprintChart() {
   return (
     <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
      <div style={{ borderBottom: '1px solid #222', padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: '10px', color: '#555' }}>TIMEFRAME</span>
+          {[
+            { label: '1m', value: '1Min' },
+            { label: '5m', value: '5Min' },
+            { label: '15m', value: '15Min' },
+            { label: '1h', value: '1Hour' },
+          ].map(tf => (
+            <button key={tf.value} onClick={() => setTimeframe(tf.value)} style={{
+              padding: '3px 10px', borderRadius: '6px', border: '1px solid',
+              borderColor: timeframe === tf.value ? '#22c55e' : '#333',
+              background: timeframe === tf.value ? '#22c55e22' : 'transparent',
+              color: timeframe === tf.value ? '#22c55e' : '#666',
+              fontSize: '12px', cursor: 'pointer'
+            }}>{tf.label}</button>
+          ))}
+        </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{ fontSize: '10px', color: '#555' }}>STOCKS</span>
           {['AAPL', 'TSLA', 'SPY', 'QQQ', 'NVDA'].map(s => (
