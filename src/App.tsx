@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react'
+ import FootprintChart from './FootprintChart'
+ import { useState, useEffect } from 'react'
 import { supabase } from './supabase'
 import type { Session } from '@supabase/supabase-js'
 
@@ -129,16 +130,7 @@ function Dashboard({ session }: { session: Session }) {
           flex: 1, display: 'flex', alignItems: 'center',
           justifyContent: 'center', flexDirection: 'column', gap: '12px'
         }}>
-          <div style={{
-            border: '1px dashed #333', borderRadius: '12px',
-            padding: '60px 80px', textAlign: 'center'
-          }}>
-            <div style={{ fontSize: '32px', marginBottom: '12px' }}>📊</div>
-            <div style={{ color: '#666', fontSize: '14px' }}>Chart canvas coming next</div>
-            <div style={{ color: '#444', fontSize: '12px', marginTop: '6px' }}>
-              Footprint renderer building in Step 12
-            </div>
-          </div>
+          <FootprintChart />
         </div>
       </div>
     </div>
