@@ -49,8 +49,15 @@ function barToCandle(bar: AlpacaBar): FootprintCandle {
 function drawChart(canvas: HTMLCanvasElement, candles: FootprintCandle[]) {
   const ctx = canvas.getContext('2d')
   if (!ctx || candles.length === 0) return
-  const W = canvas.width
-  const H = canvas.height
+
+  const dpr = window.devicePixelRatio || 1
+  const rect = canvas.getBoundingClientRect()
+  canvas.width = rect.width * dpr
+  canvas.height = rect.height * dpr
+  ctx.scale(dpr, dpr)
+
+  const W = rect.width
+  const H = rect.height
   ctx.clearRect(0, 0, W, H)
   ctx.fillStyle = '#0f0f0f'
   ctx.fillRect(0, 0, W, H)
@@ -441,6 +448,11 @@ useEffect(() => {
     if (canvasRef.current && candles.length > 0) {
       drawChart(canvasRef.current, candles)
 
+      const observer = new ResizeObserver(() => {
+        if (canvasRef.current) drawChart(canvasRef.current, candles)
+      })
+      if (canvasRef.current) observer.observe(canvasRef.current)
+      return () => observer.disconnect()
       // Delta divergence detection
       const newAlerts: string[] = []
       for (let i = 1; i < candles.length; i++) {
