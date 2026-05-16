@@ -123,7 +123,25 @@ function drawChart(canvas: HTMLCanvasElement, candles: FootprintCandle[]) {
     ctx.fillStyle = '#555'
     ctx.font = '10px monospace'
     ctx.textAlign = 'center'
-    ctx.fillText(candle.time, x + cw / 2, H - 10)
+    ctx.fillText(candle.time, x + cw / 2, H - 10)// Large trade bubble
+    const totalVol = candle.levels.reduce((s, l) => s + l.bidVol + l.askVol, 0)
+    const avgVol = candles.reduce((s, c) => s + c.levels.reduce((a, l) => a + l.bidVol + l.askVol, 0), 0) / candles.length
+    if (totalVol > avgVol * 1.5) {
+      const bubbleY = priceToY((candle.high + candle.low) / 2)
+      const radius = Math.min(20, 8 + (totalVol / avgVol) * 4)
+      const isUp = candle.close >= candle.open
+      ctx.beginPath()
+      ctx.arc(x + cw / 2, bubbleY, radius, 0, Math.PI * 2)
+      ctx.fillStyle = isUp ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)'
+      ctx.fill()
+      ctx.strokeStyle = isUp ? 'rgba(34,197,94,0.8)' : 'rgba(239,68,68,0.8)'
+      ctx.lineWidth = 1.5
+      ctx.stroke()
+      ctx.fillStyle = isUp ? '#22c55e' : '#ef4444'
+      ctx.font = 'bold 8px monospace'
+      ctx.textAlign = 'center'
+      ctx.fillText('●', x + cw / 2, bubbleY + 3)
+    }
   })
   for (let i = 0; i <= 5; i++) {
     const price = minPrice + (priceRange / 5) * i
