@@ -341,6 +341,7 @@ export default function FootprintChart() {
   const [candles, setCandles] = useState<FootprintCandle[]>([])
   const [symbol, setSymbol] = useState('AAPL')
   const [status, setStatus] = useState('Loading...')
+  const [alerts, setAlerts] = useState<string[]>([])
   const [isCrypto, setIsCrypto] = useState(false)
   const [timeframe, setTimeframe] = useState('1Min')
 
@@ -401,12 +402,33 @@ export default function FootprintChart() {
     const interval = setInterval(() => fetchBars(symbol), 30000)
     return () => clearInterval(interval)
   }, [symbol, isCrypto, timeframe])
-
-  useEffect(() => {
+useEffect(() => {
     if (canvasRef.current && candles.length > 0) {
       drawChart(canvasRef.current, candles)
+
+      // Delta divergence detection
+      const newAlerts: string[] = []
+      for (let i = 1; i < candles.length; i++) {
+        const prev = candles[i - 1]
+        const curr = candles[i]
+        const prevDelta = prev.levels.reduce((s, l) => s + l.bidVol - l.askVol, 0)
+        const currDelta = curr.levels.reduce((s, l) => s + l.bidVol - l.askVol, 0)
+        const priceUp = curr.close > prev.close
+        const priceDown = curr.close < prev.close
+        const deltaDown = currDelta < 0 && prevDelta >= 0
+        const deltaUp = currDelta > 0 && prevDelta <= 0
+
+        if (priceUp && deltaDown) {
+          newAlerts.push(`⚠️ Bearish divergence at ${curr.time} — price up but delta negative`)
+        }
+        if (priceDown && deltaUp) {
+          newAlerts.push(`⚠️ Bullish divergence at ${curr.time} — price down but delta positive`)
+        }
+      }
+      setAlerts(newAlerts)
     }
   }, [candles])
+  
 
   return (
     <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -458,6 +480,20 @@ export default function FootprintChart() {
         <canvas ref={canvasRef} width={900} height={500}
           style={{ width: '100%', height: '100%', display: 'block' }} />
       </div>
+      {alerts.length > 0 && (
+        <div style={{
+          padding: '6px 12px', borderTop: '1px solid #222',
+          display: 'flex', gap: '8px', flexWrap: 'wrap'
+        }}>
+          {alerts.map((alert, i) => (
+            <div key={i} style={{
+              fontSize: '11px', padding: '3px 10px', borderRadius: '4px',
+              background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)',
+              color: '#f59e0b'
+            }}>{alert}</div>
+          ))}
+        </div>
+      )}
        <CVDChart candles={candles} />
 <VolumeProfile candles={candles} />
     </div>
