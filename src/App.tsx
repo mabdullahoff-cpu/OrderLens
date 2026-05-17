@@ -1,3 +1,4 @@
+import LoadingScreen from './LoadingScreen'
 import { useState, useEffect } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from './supabase'
@@ -176,6 +177,7 @@ function Dashboard({ session }: { session: Session }) {
 
 export default function App() {
   const [session, setSession] = useState<Session | null>(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => setSession(session))
@@ -183,5 +185,6 @@ export default function App() {
     return () => subscription.unsubscribe()
   }, [])
 
+  if (loading) return <LoadingScreen onDone={() => setLoading(false)} />
   return session ? <Dashboard session={session} /> : <Login />
 }

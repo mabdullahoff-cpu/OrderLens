@@ -30,8 +30,7 @@ export default function TradingChart({ symbol, isCrypto, onSymbolChange }: Props
   const volumeSeriesRef = useRef<any>(null)
   const overlayRef = useRef<HTMLCanvasElement>(null)
   const footprintDataRef = useRef<Map<number, {bidVol: number, askVol: number}[]>>(new Map())
- const anchoredVwapRef = useRef<any>(null)
-  const barsDataRef = useRef<any[]>([])
+ 
   const [timeframe, setTimeframe] = useState('1Min')
   const [status, setStatus] = useState('Loading...')
 
@@ -120,39 +119,6 @@ export default function TradingChart({ symbol, isCrypto, onSymbolChange }: Props
 
     chart.timeScale().subscribeVisibleLogicalRangeChange(() => {
       drawFootprintOverlay()
-    })chart.subscribeClick((param) => {
-      if (!param.time || !param.point) return
-      try {
-        const clickTime = param.time as number
-        if (anchoredVwapRef.current) {
-          chart.removeSeries(anchoredVwapRef.current)
-          anchoredVwapRef.current = null
-        }
-        const avwapSeries = chart.addSeries(LineSeries, {
-          color: '#f59e0b',
-          lineWidth: 1,
-          lineStyle: 2,
-          title: 'AVWAP',
-        })
-        anchoredVwapRef.current = avwapSeries
-        const bars = barsDataRef.current
-        const anchorIndex = bars.findIndex((b: any) => b.time >= clickTime)
-        if (anchorIndex === -1) return
-        let cumVolPrice = 0
-        let cumVol = 0
-        const avwapData = bars.slice(anchorIndex).map((b: any) => {
-          const typical = (b.high + b.low + b.close) / 3
-          cumVolPrice += typical * b.volume
-          cumVol += b.volume
-          return {
-            time: b.time as any,
-            value: cumVol > 0 ? cumVolPrice / cumVol : typical
-          }
-        })
-        avwapSeries.setData(avwapData)
-      } catch (e) {
-        console.error('AVWAP error:', e)
-      }
     })
 const drawFootprintOverlay = () => {
     const canvas = overlayRef.current
@@ -255,14 +221,9 @@ const drawFootprintOverlay = () => {
       let allBars: AlpacaBar[] = []
       let nextPageToken: string | null = null
       const end = new Date()
-      const lookback = timeframe === '1Min' ? 2 * 24 * 60 * 60 * 1000
-        : timeframe === '5Min' ? 7 * 24 * 60 * 60 * 1000
-        : timeframe === '15Min' ? 14 * 24 * 60 * 60 * 1000
-        : 60 * 24 * 60 * 60 * 1000 // 1h = 60 days
-      const start = new Date(end.getTime() - lookback)
+      const start = new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000)
 
-      const maxPages = timeframe === '1Min' ? 3 : timeframe === '5Min' ? 5 : 10
-      for (let page = 0; page < maxPages; page++) {
+      for (let page = 0; page < 10; page++) {
         const baseUrl = isCrypto
           ? `https://data.alpaca.markets/v1beta3/crypto/us/bars?symbols=${sym}&timeframe=${timeframe}&start=${start.toISOString()}&end=${end.toISOString()}&limit=1000`
           : `https://data.alpaca.markets/v2/stocks/${sym}/bars?timeframe=${timeframe}&start=${start.toISOString()}&end=${end.toISOString()}&limit=1000`

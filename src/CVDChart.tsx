@@ -1,4 +1,4 @@
-import CVDChart from './CVDChart'
+ 
 import { useEffect, useRef } from 'react'
 
 interface CVDPoint {
@@ -115,7 +115,7 @@ export default function CVDChart({ candles }: Props) {
         height={120}
         style={{ width: '100%', height: '120px', display: 'block' }}
     
-      /><CVDChart candles={candles} />
+      /> 
     </div>
   )
 }
