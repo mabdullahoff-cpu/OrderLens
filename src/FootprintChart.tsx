@@ -343,14 +343,19 @@ function VolumeProfile({ candles }: { candles: FootprintCandle[] }) {
     </div>
   )
 }
-export default function FootprintChart() {
+interface FootprintProps {
+  symbol: string
+  isCrypto: boolean
+}
+
+export default function FootprintChart({ symbol, isCrypto }: FootprintProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [candles, setCandles] = useState<FootprintCandle[]>([])
-  const [symbol, setSymbol] = useState('AAPL')
+  
   const [status, setStatus] = useState('Loading...')
   const [alerts, setAlerts] = useState<string[]>([])
   const wsRef = useRef<WebSocket | null>(null)
-  const [isCrypto, setIsCrypto] = useState(false)
+  
   const [timeframe, setTimeframe] = useState('1Min')
 
   const fetchBars = async (sym: string) => {

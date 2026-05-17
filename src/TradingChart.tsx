@@ -16,15 +16,20 @@ interface AlpacaBar {
   v: number
 }
 
-export default function TradingChart() {
+interface Props {
+  symbol: string
+  isCrypto: boolean
+  onSymbolChange: (symbol: string, isCrypto: boolean) => void
+}
+
+export default function TradingChart({ symbol, isCrypto, onSymbolChange }: Props) {
   const chartContainerRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<any>(null)
   const candleSeriesRef = useRef<any>(null)
   const vwapSeriesRef = useRef<any>(null)
   const volumeSeriesRef = useRef<any>(null)
 
-  const [symbol, setSymbol] = useState('AAPL')
-  const [isCrypto, setIsCrypto] = useState(false)
+ 
   const [timeframe, setTimeframe] = useState('1Min')
   const [status, setStatus] = useState('Loading...')
 
@@ -259,7 +264,7 @@ export default function TradingChart() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <span style={{ fontSize: '10px', color: '#555' }}>STOCKS</span>
           {['AAPL', 'TSLA', 'SPY', 'QQQ', 'NVDA', 'AMZN', 'MSFT'].map(s => (
-            <button key={s} onClick={() => { setSymbol(s); setIsCrypto(false) }} style={{
+            <button key={s}onClick={() => onSymbolChange(s, false)}  style={{
               padding: '2px 8px', borderRadius: '4px', border: '1px solid',
               borderColor: symbol === s && !isCrypto ? '#2563eb' : '#333',
               background: symbol === s && !isCrypto ? '#2563eb22' : 'transparent',
@@ -269,7 +274,7 @@ export default function TradingChart() {
           ))}
           <span style={{ fontSize: '10px', color: '#555', marginLeft: '8px' }}>CRYPTO</span>
           {['BTC/USD', 'ETH/USD', 'SOL/USD'].map(s => (
-            <button key={s} onClick={() => { setSymbol(s); setIsCrypto(true) }} style={{
+            <button key={s} onClick={() => onSymbolChange(s, true)} style={{
               padding: '2px 8px', borderRadius: '4px', border: '1px solid',
               borderColor: symbol === s && isCrypto ? '#f59e0b' : '#333',
               background: symbol === s && isCrypto ? '#f59e0b22' : 'transparent',
