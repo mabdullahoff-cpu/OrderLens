@@ -1,5 +1,5 @@
  
-  import FootprintChart from './FootprintChart'
+  import TradingChart from './TradingChart'
  import { useState, useEffect } from 'react'
 import { supabase } from './supabase'
 import type { Session } from '@supabase/supabase-js'
@@ -131,7 +131,7 @@ function Dashboard({ session }: { session: Session }) {
           flex: 1, display: 'flex', alignItems: 'center',
           justifyContent: 'center', flexDirection: 'column', gap: '12px'
         }}>
-           <FootprintChart />
+           <TradingChart />
         </div>
       </div>
     </div>
