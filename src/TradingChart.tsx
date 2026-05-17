@@ -140,27 +140,38 @@ export default function TradingChart({ symbol, isCrypto, onSymbolChange }: Props
   }, [settings])
 
   // Fetch data
-  const fetchBars = async (sym: string) => {
+ const fetchBars = async (sym: string) => {
     setStatus('Loading...')
     try {
+      let allBars: AlpacaBar[] = []
+      let nextPageToken: string | null = null
       const end = new Date()
-      const start = new Date(end.getTime() - 2 * 60 * 60 * 1000)
-      const url = isCrypto
-        ? `https://data.alpaca.markets/v1beta3/crypto/us/bars?symbols=${sym}&timeframe=${timeframe}&start=${start.toISOString()}&end=${end.toISOString()}&limit=100`
-        : `https://data.alpaca.markets/v2/stocks/${sym}/bars?timeframe=${timeframe}&start=${start.toISOString()}&end=${end.toISOString()}&limit=100`
+      const start = new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000) // 30 days back
 
-      const res = await fetch(url, {
-        headers: {
-          'APCA-API-KEY-ID': import.meta.env.VITE_ALPACA_KEY,
-          'APCA-API-SECRET-KEY': import.meta.env.VITE_ALPACA_SECRET,
-        }
-      })
-      const data = await res.json()
-      const bars: AlpacaBar[] = isCrypto ? (data.bars?.[sym] || []) : (data.bars || [])
+      // Fetch up to 10 pages (10,000 candles)
+      for (let page = 0; page < 10; page++) {
+        const baseUrl = isCrypto
+          ? `https://data.alpaca.markets/v1beta3/crypto/us/bars?symbols=${sym}&timeframe=${timeframe}&start=${start.toISOString()}&end=${end.toISOString()}&limit=1000`
+          : `https://data.alpaca.markets/v2/stocks/${sym}/bars?timeframe=${timeframe}&start=${start.toISOString()}&end=${end.toISOString()}&limit=1000`
 
-      if (bars.length > 0) {
+        const url = nextPageToken ? `${baseUrl}&page_token=${nextPageToken}` : baseUrl
+
+        const res = await fetch(url, {
+          headers: {
+            'APCA-API-KEY-ID': import.meta.env.VITE_ALPACA_KEY,
+            'APCA-API-SECRET-KEY': import.meta.env.VITE_ALPACA_SECRET,
+          }
+        })
+        const data = await res.json()
+        const bars: AlpacaBar[] = isCrypto ? (data.bars?.[sym] || []) : (data.bars || [])
+        allBars = [...allBars, ...bars]
+        nextPageToken = data.next_page_token || null
+        if (!nextPageToken || bars.length === 0) break
+      }
+
+      if (allBars.length > 0) {
         // Candles
-        const candles = bars.map(b => ({
+        const candles = allBars.map(b => ({
           time: Math.floor(new Date(b.t).getTime() / 1000) as any,
           open: b.o, high: b.h, low: b.l, close: b.c
         }))
@@ -168,7 +179,7 @@ export default function TradingChart({ symbol, isCrypto, onSymbolChange }: Props
 
         // Volume
         if (settings.showVolume) {
-          const volumes = bars.map(b => ({
+          const volumes = allBars.map(b => ({
             time: Math.floor(new Date(b.t).getTime() / 1000) as any,
             value: b.v,
             color: b.c >= b.o ? 'rgba(34,197,94,0.4)' : 'rgba(239,68,68,0.4)'
@@ -180,7 +191,7 @@ export default function TradingChart({ symbol, isCrypto, onSymbolChange }: Props
         if (settings.showVwap) {
           let cumVolPrice = 0
           let cumVol = 0
-          const vwapData = bars.map(b => {
+          const vwapData = allBars.map(b => {
             const typical = (b.h + b.l + b.c) / 3
             cumVolPrice += typical * b.v
             cumVol += b.v
@@ -193,7 +204,7 @@ export default function TradingChart({ symbol, isCrypto, onSymbolChange }: Props
         }
 
         chartRef.current?.timeScale().fitContent()
-        setStatus(`${sym} — ${bars.length} candles`)
+        setStatus(`${sym} — ${allBars.length} candles loaded`)
       } else {
         setStatus('No data — market may be closed')
       }
